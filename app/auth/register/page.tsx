@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/app/context/auth-context';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -28,6 +30,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const validatePassword = (pwd: string) => {
     setValidations({
@@ -69,6 +72,11 @@ export default function RegisterPage() {
         formData.fullName,
         formData.phone
       );
+      toast({
+        title: 'Registration Successful',
+        description: 'Your account has been created successfully. Redirecting to dashboard...',
+        variant: 'default',
+      });
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -202,6 +210,7 @@ export default function RegisterPage() {
           </form>
         </CardContent>
       </Card>
+      <Toaster />
     </div>
   );
 }

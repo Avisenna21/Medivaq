@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/app/context/auth-context';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,6 +19,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +28,11 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
+      toast({
+        title: 'Login Successful',
+        description: 'Welcome back! Redirecting to your dashboard...',
+        variant: 'default',
+      });
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -113,6 +121,7 @@ export default function LoginPage() {
           </form>
         </CardContent>
       </Card>
+      <Toaster />
     </div>
   );
 }

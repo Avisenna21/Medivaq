@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/app/context/auth-context';
+import { useLanguage } from '@/app/context/language-context';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import { LanguageSwitcher } from '@/components/language-switcher';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,6 +22,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,13 +32,13 @@ export default function LoginPage() {
     try {
       await login(email, password);
       toast({
-        title: 'Login Successful',
-        description: 'Welcome back! Redirecting to your dashboard...',
+        title: t('auth.loginSuccess'),
+        description: t('auth.loginSuccessDesc'),
         variant: 'default',
       });
       router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : t('messages.loadingError'));
     } finally {
       setIsLoading(false);
     }
@@ -43,10 +46,13 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Sign in to your Medical Evacuation Account</CardDescription>
+          <CardTitle className="text-2xl">{t('auth.login')}</CardTitle>
+          <CardDescription>{t('evacuation.title')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -59,7 +65,7 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
-                Email
+                {t('auth.email')}
               </label>
               <Input
                 id="email"
@@ -75,13 +81,13 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label htmlFor="password" className="text-sm font-medium">
-                  Password
+                  {t('auth.password')}
                 </label>
                 <Link
                   href="/auth/forgot-password"
                   className="text-sm text-primary hover:underline"
                 >
-                  Forgot?
+                  {t('auth.forgotPassword')}
                 </Link>
               </div>
               <Input
@@ -100,7 +106,7 @@ export default function LoginPage() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? t('messages.pleaseWait') : t('auth.login')}
             </Button>
 
             <div className="relative">
@@ -108,14 +114,14 @@ export default function LoginPage() {
                 <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-card text-muted-foreground">Or</span>
+                <span className="px-2 bg-card text-muted-foreground">{t('auth.or')}</span>
               </div>
             </div>
 
             <p className="text-center text-sm text-muted-foreground">
-              Don't have an account?{' '}
+              {t('auth.dontHaveAccount')}{' '}
               <Link href="/auth/register" className="text-primary hover:underline font-medium">
-                Sign up
+                {t('auth.register')}
               </Link>
             </p>
           </form>

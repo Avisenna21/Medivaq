@@ -8,13 +8,28 @@ export default function NewEvacuationPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (data: any) => {
     setIsLoading(true);
+
     try {
+      const form = new FormData();
+
+      // loop semua field text
+      Object.entries(data).forEach(([key, value]) => {
+        if (value instanceof File) {
+          form.append(key, value); // file langsung append
+        } else if (Array.isArray(value)) {
+          // kalau multiple file / multiple value
+          value.forEach((v) => form.append(key, v));
+        } else if (value !== null && value !== undefined) {
+          form.append(key, String(value));
+        }
+      });
+      console.log('FormData entries: ', form);
       const response = await fetch('/api/evacuations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: form, // ✅ kirim FormData
+        // ❗ JANGAN SET HEADER CONTENT-TYPE
       });
 
       if (!response.ok) {
@@ -22,10 +37,9 @@ export default function NewEvacuationPage() {
         throw new Error(error.error || 'Failed to create evacuation');
       }
 
-      const data = await response.json();
-      setTimeout(() => {
-        router.push(`/dashboard/evacuation/${data.id}`);
-      }, 1000);
+      const res = await response.json();
+
+      router.push(`/dashboard/evacuation/${res.id}`);
     } catch (error) {
       throw error;
     } finally {
@@ -37,7 +51,9 @@ export default function NewEvacuationPage() {
     <div className="min-h-screen bg-background py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">New Evacuation Request</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            New Evacuation Request
+          </h1>
           <p className="text-muted-foreground mt-2">
             Submit a medical evacuation request by filling out the form below
           </p>

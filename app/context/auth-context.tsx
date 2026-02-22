@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { LanguageProvider } from './language-context';
 interface User {
-  id: number;
+  id: string;
   email: string;
   fullName: string;
   role: 'admin' | 'user';

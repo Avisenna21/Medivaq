@@ -57,7 +57,10 @@
     "requestPasswordReset": "Minta Reset Kata Sandi",
     "verifyOtp": "Verifikasi OTP",
     "emailLink": "Tautan Email",
-    "or": "atau"
+
+    "or": "Atau",
+    "loggingIn": "Sedang masuk...",
+    "registering": "Sedang mendaftar..."
   },
   "dashboard": {
     "admin": "Dashboard Admin",

@@ -13,12 +13,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useAuth } from '@/app/context/auth-context';
-import { useLanguage } from '@/app/context/language-context';
+
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { LanguageProvider, useLanguage } from '@/app/context/language-context';
+import { useLanguage } from '@/app/context/language-context';
 import { LanguageSwitcher } from '@/components/language-switcher';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -28,8 +28,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const { t, language, setLanguage } = useLanguage();
-
+  const { t } = useLanguage();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');

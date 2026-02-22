@@ -1,78 +1,39 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import en from '@/locales/en.json';
-import id from '@/locales/id.json';
+import { createContext, useContext, useState } from 'react';
+import id from '../../locales/id.json';
+import en from '../../locales/en.json';
 
-type Language = 'en' | 'id';
+type Language = 'id' | 'en';
 
-interface LanguageContextType {
-  language: Language;
-  setLanguage: (lang: Language) => void;
-  t: (key: string, defaultValue?: string) => string;
-  translations: typeof en;
-}
-
-const LanguageContext = createContext<LanguageContextType | undefined>(
-  undefined,
-);
-
-const translations = {
-  en,
+const messages = {
   id,
+  en,
 };
 
+type LanguageContextType = {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: string) => string;
+};
+
+const LanguageContext = createContext<LanguageContextType | null>(null);
+
+// helper ambil nested key: auth.login → json.auth.login
+function getValue(obj: any, path: string): string | undefined {
+  return path.split('.').reduce((o, k) => (o ? o[k] : undefined), obj);
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>('en');
-  const [mounted, setMounted] = useState(false);
+  const [language, setLanguage] = useState<Language>('id');
 
-  useEffect(() => {
-    // Load saved language from localStorage
-    const saved =
-      typeof window !== 'undefined'
-        ? (localStorage.getItem('language') as Language)
-        : null;
-    if (saved && (saved === 'en' || saved === 'id')) {
-      setLanguage(saved);
-    }
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && typeof window !== 'undefined') {
-      localStorage.setItem('language', language);
-      document.documentElement.lang = language;
-    }
-  }, [language, mounted]);
-
-  const t = (key: string, defaultValue: string = key): string => {
-    const keys = key.split('.');
-    let value: any = translations[language];
-
-    for (const k of keys) {
-      if (value && typeof value === 'object' && k in value) {
-        value = value[k];
-      } else {
-        return defaultValue;
-      }
-    }
-
-    return typeof value === 'string' ? value : defaultValue;
+  const t = (key: string): string => {
+    const value = getValue(messages[language], key);
+    return value ?? key; // fallback kalau key tidak ada
   };
 
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
   return (
-    <LanguageContext.Provider
-      value={{
-        language,
-        setLanguage,
-        t,
-        translations: translations[language],
-      }}
-    >
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );

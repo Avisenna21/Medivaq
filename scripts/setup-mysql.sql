@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS air_medical_evacuation (
   noTeleponPendamping VARCHAR(50),
   noTeleponKeluarga VARCHAR(50),
   status ENUM('pending','valid','canceled','reviewed') DEFAULT 'pending',
+  catatanRevisi TEXT,
   noSuratPraktik VARCHAR(255),
   fotoKondisiPasien VARCHAR(500),
   ktpPasien VARCHAR(500),

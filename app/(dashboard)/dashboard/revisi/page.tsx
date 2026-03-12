@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from "react"
+import { useAuth } from "@/app/context/auth-context"
 
 import {
   Card,
@@ -83,6 +84,7 @@ export default function RevisiPage() {
   const [selectedApp, setSelectedApp] = useState<EvacuationApplication | null>(null)
   const [showDetail, setShowDetail] = useState(false)
    const [editForm, setEditForm] = useState<EditableForm>(EMPTY_FORM)
+   const { user, isLoading: authLoading } = useAuth()
 
   useEffect(() => {
     fetchApplications()
@@ -210,7 +212,16 @@ export default function RevisiPage() {
 
   }
 
+  if (authLoading) return null
 
+  if (user?.role === "admin") {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-2">Akses Ditolak</h1>
+        <p className="text-gray-600">Fitur revisi hanya untuk user.</p>
+      </div>
+    )
+  }
 
 
   return (

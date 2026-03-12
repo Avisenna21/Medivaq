@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 
@@ -26,14 +26,42 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+     const body = await req.json().catch(() => ({}));
+    const catatanRevisi =
+      typeof body?.catatanRevisi === 'string'
+        ? body.catatanRevisi.trim()
+        : null;
+
     const { id } = await params;
 
-    await query(
-      "UPDATE air_medical_evacuation SET status = 'reviewed' WHERE id = ?",
-      [id],
+      const hasNoteColumnResult = await query(
+      `SELECT COUNT(*) as total
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'air_medical_evacuation'
+         AND COLUMN_NAME = 'catatanRevisi'`,
     );
 
+    
+    const hasNoteColumn =
+      Array.isArray(hasNoteColumnResult) &&
+      Number((hasNoteColumnResult[0] as any)?.total || 0) > 0;
+
+    if (hasNoteColumn) {
+      await query(
+        "UPDATE air_medical_evacuation SET status = 'reviewed', catatanRevisi = ? WHERE id = ?",
+        [catatanRevisi || null, id],
+      );
+    } else {
+      await query(
+        "UPDATE air_medical_evacuation SET status = 'reviewed' WHERE id = ?",
+        [id],
+      );
+    }
+
     return NextResponse.json({ success: true });
+
+
   } catch (error) {
     console.error('Reject evacuation error:', error);
     return NextResponse.json(

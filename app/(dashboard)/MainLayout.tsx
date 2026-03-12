@@ -21,12 +21,10 @@ import { useAuth } from '../context/auth-context';
  */
 const adminNavItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/dashboard/permohonan', label: 'Permohonan', icon: CheckCircle },
   { path: '/dashboard/verifikasi', label: 'Verifikasi', icon: CheckCircle },
-  { path: '/dashboard/revisi', label: 'Revisi', icon: Edit },
-  { path: '/dashboard/draft', label: 'Draft', icon: FilePlus },
   { path: '/dashboard/penerbitan', label: 'Penerbitan', icon: FileCheck },
   { path: '/dashboard/selesai', label: 'Selesai', icon: CheckSquare },
+
 ];
 
 /**
@@ -38,6 +36,7 @@ const userNavItems = [
   { path: '/dashboard/draft', label: 'Draft', icon: FilePlus },
   { path: '/dashboard/verifikasi', label: 'Verifikasi', icon: CheckCircle },
   { path: '/dashboard/revisi', label: 'Revisi', icon: Edit },
+  { path: '/dashboard/selesai', label: 'Selesai', icon: CheckSquare },
 ];
 
 export function MainLayout({ children }: { children: React.ReactNode }) {

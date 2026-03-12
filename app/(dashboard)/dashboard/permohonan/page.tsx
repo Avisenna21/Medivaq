@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/context/auth-context";
 import {
   Select,
   SelectContent,
@@ -32,6 +33,7 @@ import {
 
 export default function PermohonanPage() {
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
   const {addApplication } = useApplications();
   const [loadingSubmit, setLoadingSubmit] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
@@ -250,8 +252,6 @@ const [previewMimeType, setPreviewMimeType] = useState<string | null>(null)
     nosuratIzinExample: language === "id"
       ? "Contoh: Nama Tenaga medis- No SIP"
       : "Example: Medical Personnel Name - Permit Number"
-    
-
 
   };
 
@@ -540,6 +540,17 @@ function resetPreview() {
 const isPdfPreview =
   previewMimeType === "application/pdf" ||
   (!!previewFileUrl && previewFileUrl.toLowerCase().includes(".pdf"))
+
+  if (authLoading) return null
+
+  if (user?.role === "admin") {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-2">Akses Ditolak</h1>
+        <p className="text-gray-600">Fitur permohonan hanya untuk user.</p>
+      </div>
+    )
+  }
 
   /* ===============================
   RETURN

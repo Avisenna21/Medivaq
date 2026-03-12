@@ -43,6 +43,7 @@ const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null)
 const [selectedFile, setSelectedFile] = useState<File | null>(null)
 const [previewField, setPreviewField] = useState<string | null>(null)
 const fileInputRef = useRef<HTMLInputElement | null>(null)
+const [previewMimeType, setPreviewMimeType] = useState<string | null>(null)
   
   const [formData, setFormData] = useState<any>({
     jenisLayanan: "",
@@ -473,7 +474,7 @@ function handlePreview(file: File, field: string) {
   setPreviewFileUrl(previewUrl)
   setSelectedFile(file)
   setPreviewField(field)
-
+  setPreviewMimeType(file.type || null)
   setPreviewModal(true)
 }
 
@@ -513,12 +514,21 @@ async function confirmUpload() {
   }
 }
 
+function openUploadedPreview(fileUrl: string) {
+  setPreviewFileUrl(fileUrl)
+  setSelectedFile(null)
+  setPreviewField(null)
+  setPreviewMimeType(fileUrl.toLowerCase().includes(".pdf") ? "application/pdf" : null)
+  setPreviewModal(true)
+}
+
 function resetPreview() {
 
   setPreviewModal(false)
   setPreviewFileUrl(null)
   setSelectedFile(null)
   setPreviewField(null)
+  setPreviewMimeType(null)
 
   // RESET INPUT FILE
   if (fileInputRef.current) {
@@ -526,6 +536,10 @@ function resetPreview() {
   }
 
 }
+
+const isPdfPreview =
+  previewMimeType === "application/pdf" ||
+  (!!previewFileUrl && previewFileUrl.toLowerCase().includes(".pdf"))
 
   /* ===============================
   RETURN
@@ -1260,6 +1274,7 @@ function resetPreview() {
           // modal hanya muncul dari sini
           setPreviewFileUrl(formData.noSuratPraktik)
           setPreviewModal(true)
+          openUploadedPreview(formData.noSuratPraktik)
 
         }}
       >
@@ -1301,7 +1316,7 @@ function resetPreview() {
         onClick={() => {
 
           // modal hanya muncul dari sini
-          setPreviewFileUrl(formData.noSuratPraktik)
+          setPreviewFileUrl(formData.fotoKondisiPasien)
           setPreviewModal(true)
 
         }}
@@ -1357,77 +1372,221 @@ function resetPreview() {
   </div>
 </div>
 
-    {/* Manifest Private Jet */}
-    <div>
-      <Label>Manifest Private Jet</Label>
+{/* Manifest Private Jet */}
+<div>
+  <Label className="mb-1 block">Manifest Private Jet</Label>
+  <div className="flex items-center justify-between border rounded-md px-3 py-2">
+    <div className="flex items-center gap-3">
+
       <Input
+        ref={fileInputRef}
         type="file"
-        accept="application/pdf"
-        onChange={async (e) => {
+        accept="image/*,application/pdf"
+        className="text-sm border-none p-0 file:mr-3 file:px-3 file:py-1 file:border file:rounded file:bg-gray-200 file:text-sm file:cursor-pointer hover:file:bg-gray-300"
+        onChange={(e) => {
+
           const file = e.target.files?.[0]
           if (!file) return
-          await handleUpload(file, "manifetPrivateJet")
+
+          // hanya upload 
+          handlePreview(file, "manifetPrivateJet")
+          
         }}
       />
     </div>
 
-    {/* Rekam Medis Pasien */}
-    <div>
-      <Label>Rekam Medis Pasien</Label>
-      <Input
-        type="file"
-        accept="application/pdf"
-        onChange={async (e) => {
-          const file = e.target.files?.[0]
-          if (!file) return
-          await handleUpload(file, "rekamMedisPasien")
-        }}
-      />
-    </div>
+    {/* ICON PREVIEW */}
+    {formData.manifetPrivateJet && (
+      <button
+        type="button"
+        className="p-2 rounded hover:bg-gray-100"
+        onClick={() => {
 
-    {/* Surat Rujukan */}
-    <div>
-      <Label>Surat Rujukan</Label>
-      <Input
-        type="file"
-        accept="application/pdf"
-        onChange={async (e) => {
-          const file = e.target.files?.[0]
-          if (!file) return
-          await handleUpload(file, "suratRujukan")
-        }}
-      />
-    </div>
+          // modal hanya muncul dari sini
+          setPreviewFileUrl(formData.manifetPrivateJet)
+          setPreviewModal(true)
 
-    {/* Tiket Pesawat */}
-    <div>
-      <Label>Tiket Pesawat</Label>
-      <Input
-        type="file"
-        accept="application/pdf"
-        onChange={async (e) => {
-          const file = e.target.files?.[0]
-          if (!file) return
-          await handleUpload(file, "tiketPesawat")
         }}
-      />
-    </div>
-
-    {/* Dokumen Petugas Medis */}
-    <div>
-      <Label>Dokumen Petugas Medis</Label>
-      <Input
-        type="file"
-        accept="application/pdf"
-        onChange={async (e) => {
-          const file = e.target.files?.[0]
-          if (!file) return
-          await handleUpload(file, "dokumentPetugasMedis")
-        }}
-      />
-    </div>
+      >
+        <Eye size={18} />
+      </button>
+    )}
 
   </div>
+</div>
+
+{/* Rekam Medis Pasien */}
+<div>
+  <Label className="mb-1 block">Rekam Medis Pasien</Label>
+  <div className="flex items-center justify-between border rounded-md px-3 py-2">
+    <div className="flex items-center gap-3">
+
+      <Input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="text-sm border-none p-0 file:mr-3 file:px-3 file:py-1 file:border file:rounded file:bg-gray-200 file:text-sm file:cursor-pointer hover:file:bg-gray-300"
+        onChange={(e) => {
+
+          const file = e.target.files?.[0]
+          if (!file) return
+
+          // hanya upload 
+          handlePreview(file, "rekamMedisPasien")
+          
+        }}
+      />
+    </div>
+
+    {/* ICON PREVIEW */}
+    {formData.rekamMedisPasien && (
+      <button
+        type="button"
+        className="p-2 rounded hover:bg-gray-100"
+        onClick={() => {
+
+          // modal hanya muncul dari sini
+          setPreviewFileUrl(formData.rekamMedisPasien)
+          setPreviewModal(true)
+
+        }}
+      >
+        <Eye size={18} />
+      </button>
+    )}
+
+  </div>
+</div>
+
+{/* Surat Rujukan */}
+<div>
+  <Label className="mb-1 block">Surat Rujukan</Label>
+  <div className="flex items-center justify-between border rounded-md px-3 py-2">
+    <div className="flex items-center gap-3">
+
+      <Input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="text-sm border-none p-0 file:mr-3 file:px-3 file:py-1 file:border file:rounded file:bg-gray-200 file:text-sm file:cursor-pointer hover:file:bg-gray-300"
+        onChange={(e) => {
+
+          const file = e.target.files?.[0]
+          if (!file) return
+
+          // hanya upload 
+          handlePreview(file, "suratRujukan")
+          
+        }}
+      />
+    </div>
+
+    {/* ICON PREVIEW */}
+    {formData.suratRujukan && (
+      <button
+        type="button"
+        className="p-2 rounded hover:bg-gray-100"
+        onClick={() => {
+
+          // modal hanya muncul dari sini
+          setPreviewFileUrl(formData.suratRujukan)
+          setPreviewModal(true)
+
+        }}
+      >
+        <Eye size={18} />
+      </button>
+    )}
+
+  </div>
+</div>
+
+{/* Tiket Pesawat */}
+<div>
+  <Label className="mb-1 block">Tiket Pesawat</Label>
+  <div className="flex items-center justify-between border rounded-md px-3 py-2">
+    <div className="flex items-center gap-3">
+
+      <Input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="text-sm border-none p-0 file:mr-3 file:px-3 file:py-1 file:border file:rounded file:bg-gray-200 file:text-sm file:cursor-pointer hover:file:bg-gray-300"
+        onChange={(e) => {
+
+          const file = e.target.files?.[0]
+          if (!file) return
+
+          // hanya upload 
+          handlePreview(file, "tiketPesawat")
+          
+        }}
+      />
+    </div>
+
+    {/* ICON PREVIEW */}
+    {formData.tiketPesawat && (
+      <button
+        type="button"
+        className="p-2 rounded hover:bg-gray-100"
+        onClick={() => {
+
+          // modal hanya muncul dari sini
+          setPreviewFileUrl(formData.tiketPesawat)
+          setPreviewModal(true)
+
+        }}
+      >
+        <Eye size={18} />
+      </button>
+    )}
+
+  </div>
+</div>
+
+{/* Dokumen Petugas Medis */}
+<div>
+  <Label className="mb-1 block">Dokumen Petugas Medis</Label>
+  <div className="flex items-center justify-between border rounded-md px-3 py-2">
+    <div className="flex items-center gap-3">
+
+      <Input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="text-sm border-none p-0 file:mr-3 file:px-3 file:py-1 file:border file:rounded file:bg-gray-200 file:text-sm file:cursor-pointer hover:file:bg-gray-300"
+        onChange={(e) => {
+
+          const file = e.target.files?.[0]
+          if (!file) return
+
+          // hanya upload 
+          handlePreview(file, "dokumentPetugasMedis")
+          
+        }}
+      />
+    </div>
+
+    {/* ICON PREVIEW */}
+    {formData.dokumentPetugasMedis && (
+      <button
+        type="button"
+        className="p-2 rounded hover:bg-gray-100"
+        onClick={() => {
+
+          // modal hanya muncul dari sini
+          setPreviewFileUrl(formData.dokumentPetugasMedis)
+          setPreviewModal(true)
+
+        }}
+      >
+        <Eye size={18} />
+      </button>
+    )}
+
+  </div>
+</div>
+</div>
 )}
 
           {/* NAVIGATION */}
@@ -1478,7 +1637,7 @@ function resetPreview() {
     {previewFileUrl && (
       <div className="flex justify-center">
 
-        {previewFileUrl.endsWith(".pdf") ? (
+        {isPdfPreview ? (
 
           <iframe
             src={previewFileUrl}

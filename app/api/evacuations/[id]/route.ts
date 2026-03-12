@@ -3,6 +3,16 @@ import { query } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { logAuditEvent } from '@/lib/auth';
 
+
+const EDITABLE_COLUMN_CANDIDATES = {
+  namaPasien: ['namaPasien', 'nama_pasien'],
+  jenisLayanan: ['jenisLayanan', 'jenis_layanan'],
+  namaMaskapai: ['namaMaskapai', 'nama_maskapai'],
+  noPenerbangan: ['noPenerbangan', 'no_penerbangan'],
+  tanggalPerjalanan: ['tanggalPerjalanan', 'tanggal_perjalanan'],
+} as const;
+
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -116,26 +126,75 @@ export async function PUT(
       );
     }
 
-    await query(
-      `UPDATE air_medical_evacuation
-       SET namaPasien = ?,
-           jenisLayanan = ?,
-           namaMaskapai = ?,
-           noPenerbangan = ?,
-           tanggalPerjalanan = ?,
-           status = 'pending'
-       WHERE id = ?`,
-      [
-        namaPasien,
-        jenisLayanan,
-        namaMaskapai,
-        noPenerbangan,
-        tanggalPerjalanan,
-        id,
-      ],
+let updated = false;
+
+    try {
+      const result = (await query(
+        `UPDATE air_medical_evacuation
+         SET namaPasien = ?,
+             jenisLayanan = ?,
+             namaMaskapai = ?,
+             noPenerbangan = ?,
+             tanggalPerjalanan = ?,
+             status = 'pending'
+         WHERE id = ? AND user_id = ?`,
+        [
+          namaPasien,
+          jenisLayanan,
+          namaMaskapai,
+          noPenerbangan,
+          tanggalPerjalanan,
+          id,
+          session.userId,
+        ],
+      )) as any;
+
+      updated = Number(result?.affectedRows || 0) > 0;
+    } catch (error: any) {
+      if (error?.code !== 'ER_BAD_FIELD_ERROR') {
+        throw error;
+      }
+
+      const fallbackResult = (await query(
+        `UPDATE air_medical_evacuation
+         SET nama_pasien = ?,
+             jenis_layanan = ?,
+             nama_maskapai = ?,
+             no_penerbangan = ?,
+             tanggal_perjalanan = ?,
+             status = 'pending'
+         WHERE id = ? AND user_id = ?`,
+        [
+          namaPasien,
+          jenisLayanan,
+          namaMaskapai,
+          noPenerbangan,
+          tanggalPerjalanan,
+          id,
+          session.userId,
+        ],
+      )) as any;
+
+      updated = Number(fallbackResult?.affectedRows || 0) > 0;
+    }
+
+    if (!updated) {
+      return NextResponse.json(
+        { error: 'Data revisi tidak berhasil diperbarui' },
+        { status: 404 },
+      );
+    }
+
+    const updatedResults = await query(
+      'SELECT * FROM air_medical_evacuation WHERE id = ?',
+      [id],
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      data: Array.isArray(updatedResults) ? updatedResults[0] : null,
+    });
+
   } catch (error) {
     console.error('Update evacuation error:', error);
     return NextResponse.json(

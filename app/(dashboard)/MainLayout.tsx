@@ -36,6 +36,7 @@ const userNavItems = [
   { path: '/dashboard/draft', label: 'Draft', icon: FilePlus },
   { path: '/dashboard/verifikasi', label: 'Verifikasi', icon: CheckCircle },
   { path: '/dashboard/revisi', label: 'Revisi', icon: Edit },
+  { path: '/dashboard/penerbitan', label: 'Penerbitan', icon: FileCheck },
   { path: '/dashboard/selesai', label: 'Selesai', icon: CheckSquare },
 ];
 

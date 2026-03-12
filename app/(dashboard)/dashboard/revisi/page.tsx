@@ -12,6 +12,9 @@ import {
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 import {
   Dialog,
@@ -22,14 +25,54 @@ import {
   DialogFooter
 } from "@/components/ui/dialog"
 
+type EvacuationApplication = {
+  id: string
+  namaPasien: string | null
+  jenisLayanan: string | null
+  namaMaskapai: string | null
+  noPenerbangan: string | null
+  tanggalPerjalanan: string | null
+  catatanRevisi?: string | null
+}
+
+type EditableForm = {
+  namaPasien: string
+  jenisLayanan: string
+  namaMaskapai: string
+  noPenerbangan: string
+  tanggalPerjalanan: string
+}
+
+const EMPTY_FORM: EditableForm = {
+  namaPasien: "",
+  jenisLayanan: "",
+  namaMaskapai: "",
+  noPenerbangan: "",
+  tanggalPerjalanan: ""
+}
+
+function toDateInputValue(value: string | null | undefined) {
+  if (!value) return ""
+
+  const parsedDate = new Date(value)
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return ""
+  }
+
+  return parsedDate.toISOString().slice(0, 10)
+}
+
 
 export default function RevisiPage() {
 
-  const [applications, setApplications] = useState<any[]>([])
+ const [applications, setApplications] = useState<EvacuationApplication[]>([])
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
 
-  const [selectedApp, setSelectedApp] = useState<any>(null)
+  const [selectedApp, setSelectedApp] = useState<EvacuationApplication | null>(null)
   const [showDetail, setShowDetail] = useState(false)
+   const [editForm, setEditForm] = useState<EditableForm>(EMPTY_FORM)
 
   useEffect(() => {
     fetchApplications()
@@ -50,7 +93,7 @@ export default function RevisiPage() {
 
         
 
-        setApplications(result.data)
+        setApplications(result.data || [])
 
       }
 
@@ -78,28 +121,74 @@ export default function RevisiPage() {
 
     const result = await res.json()
 
-    console.log("DETAIL DATA:", result)
+     if (res.ok) {
+        const data = (result.data || result) as EvacuationApplication
 
-    if (res.ok) {
+        setSelectedApp(data)
+        setEditForm({
+          namaPasien: data.namaPasien || "",
+          jenisLayanan: data.jenisLayanan || "",
+          namaMaskapai: data.namaMaskapai || "",
+          noPenerbangan: data.noPenerbangan || "",
+          tanggalPerjalanan: toDateInputValue(data.tanggalPerjalanan)
+        })
 
-      // ini yang penting
-      setSelectedApp(result.data || result)
+        setShowDetail(true)
+      }
 
-      setShowDetail(true)
+     } catch (error) {
 
-    }
-
-  } catch (error) {
-
-    console.error("Detail error:", error)
-
+      console.error("Detail error:", error)
+      
   }
 
 }
 
+  async function submitRevisi() {
+    if (!selectedApp) {
+      return
+    }
+ try {
+      setSubmitting(true)
+
+      const res = await fetch(`/api/evacuations/${selectedApp.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify(editForm)
+      })
+   const result = await res.json()
+      if (!res.ok) {
+        alert(result.error || "Gagal mengirim ulang revisi")
+        return
+      }
+
+       alert("Data revisi berhasil disimpan dan dikirim ulang untuk verifikasi")
+
+       setApplications((prev) => prev.filter((item) => item.id !== selectedApp.id))
+      setShowDetail(false)
+      setSelectedApp(null)
+      setEditForm(EMPTY_FORM)
+
+      } catch (error) {
+      console.error("Submit revisi error:", error)
+      alert("Terjadi kesalahan saat mengirim ulang untuk verifikasi")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+  
+   function handleEditChange<K extends keyof EditableForm>(field: K, value: EditableForm[K]) {
+    setEditForm((prev) => ({
+      ...prev,
+      [field]: value
+    }))
+  }
 
 
-  function formatDate(date: string) {
+ function formatDate(date: string | null | undefined) {
 
     if (!date) return "-"
 
@@ -110,6 +199,7 @@ export default function RevisiPage() {
     })
 
   }
+
 
 
 
@@ -188,11 +278,7 @@ export default function RevisiPage() {
 
                     <div className="text-sm text-gray-500">
 
-                      {app.tanggalPerjalanan
-                        ? new Date(app.tanggalPerjalanan)
-                            .toLocaleDateString("id-ID")
-                        : "-"
-                      }
+                      {formatDate(app.tanggalPerjalanan)}
 
                     </div>
 
@@ -254,72 +340,79 @@ export default function RevisiPage() {
 
             <div className="space-y-4 text-sm">
 
-              <div>
+             
 
-                <p className="text-xs text-gray-500">
-                  Nama Pasien
-                </p>
+          
 
-                <p className="font-medium">
-                  {selectedApp.namaPasien || "-"}
-                </p>
-
-              </div>
-
-
-
-              <div>
-
-                <p className="text-xs text-gray-500">
-                  Jenis Layanan
-                </p>
-
-                <p className="font-medium">
-                  {selectedApp.jenisLayanan || "-"}
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs font-semibold text-amber-700 mb-1">Catatan dari Verifikasi</p>
+                <p className="text-amber-900 whitespace-pre-wrap">
+                  {selectedApp.catatanRevisi || "Belum ada catatan revisi."}
                 </p>
 
               </div>
 
 
 
-              <div>
-
-                <p className="text-xs text-gray-500">
-                  Nama Maskapai
-                </p>
-
-                <p className="font-medium">
-                  {selectedApp.namaMaskapai || "-"}
-                </p>
-
+              <div className="space-y-1">
+                <Label htmlFor="namaPasien">Nama Pasien</Label>
+                <Input
+                  id="namaPasien"
+                  value={editForm.namaPasien}
+                  onChange={(e) => handleEditChange("namaPasien", e.target.value)}
+                />
               </div>
 
 
 
-              <div>
-
-                <p className="text-xs text-gray-500">
-                  No Penerbangan
-                </p>
-
-                <p className="font-medium">
-                  {selectedApp.noPenerbangan || "-"}
-                </p>
-
+              <div className="space-y-1">
+                <Label htmlFor="jenisLayanan">Jenis Layanan</Label>
+                <Input
+                  id="jenisLayanan"
+                  value={editForm.jenisLayanan}
+                  onChange={(e) => handleEditChange("jenisLayanan", e.target.value)}
+                />
               </div>
 
 
 
-              <div>
+               <div className="space-y-1">
+                <Label htmlFor="namaMaskapai">Nama Maskapai</Label>
+                <Input
+                  id="namaMaskapai"
+                  value={editForm.namaMaskapai}
+                  onChange={(e) => handleEditChange("namaMaskapai", e.target.value)}
+                />
 
-                <p className="text-xs text-gray-500">
-                  Tanggal Perjalanan
-                </p>
+              </div>
+              
+              <div className="space-y-1">
+                <Label htmlFor="noPenerbangan">No Penerbangan</Label>
+                <Input
+                  id="noPenerbangan"
+                  value={editForm.noPenerbangan}
+                  onChange={(e) => handleEditChange("noPenerbangan", e.target.value)}
+                />
+              </div>
 
-                <p className="font-medium">
-                  {formatDate(selectedApp.tanggalPerjalanan)}
-                </p>
 
+              <div className="space-y-1">
+                <Label htmlFor="tanggalPerjalanan">Tanggal Perjalanan</Label>
+                <Input
+                  id="tanggalPerjalanan"
+                  type="date"
+                  value={editForm.tanggalPerjalanan}
+                  onChange={(e) => handleEditChange("tanggalPerjalanan", e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="summary">Ringkasan Perbaikan</Label>
+                <Textarea
+                  id="summary"
+                  value={`Data terakhir: ${selectedApp.namaPasien || "-"} (${formatDate(selectedApp.tanggalPerjalanan)})`}
+                  readOnly
+                />
               </div>
 
             </div>
@@ -333,8 +426,12 @@ export default function RevisiPage() {
             <Button
               variant="outline"
               onClick={() => setShowDetail(false)}
+              disabled={submitting}
             >
               Tutup
+            </Button>
+             <Button onClick={submitRevisi} disabled={submitting || !selectedApp}>
+              {submitting ? "Mengirim..." : "Kirim Ulang Verifikasi"}
             </Button>
 
           </DialogFooter>

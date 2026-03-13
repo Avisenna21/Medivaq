@@ -1,175 +1,202 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from "react"
-import { useApplications } from "@/app/context/ApplicationContext"
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/context/auth-context';
+
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription
-} from "@/components/ui/card"
+} from '@/components/ui/card';
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog';
 
+type AppItem = {
+  id: string;
+  namaPasien: string | null;
+  noPenerbangan: string | null;
+  tanggalPerjalanan: string | null;
+  status: 'pending' | 'reviewed' | 'valid' | 'canceled';
+  catatanRevisi?: string | null;
+  catatan_revisi?: string | null;
+  revisionNotes?: string | null;
+};
 
 export default function VerifikasiPage() {
-
-  const [applications, setApplications] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedApp, setSelectedApp] = useState<any>(null)
-  const [showDetail, setShowDetail] = useState(false)
-  const [detailStep, setDetailStep] = useState(1)
-  const { moveToRevision } = useApplications()
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
 
+  const [applications, setApplications] = useState<AppItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedApp, setSelectedApp] = useState<AppItem | null>(null);
+
+  const [showDetail, setShowDetail] = useState(false);
+  const [showRevisiModal, setShowRevisiModal] = useState(false);
+
+  const [revisiNote, setRevisiNote] = useState('');
+  const [revisiId, setRevisiId] = useState<string | null>(null);
+  const [submittingRevisi, setSubmittingRevisi] = useState(false);
 
   useEffect(() => {
-    fetchApplications()
-  }, [])
-
+    if (authLoading) return;
+    fetchApplications();
+  }, [authLoading, user?.role]);
 
   async function fetchApplications() {
-    try {
-      const res = await fetch("/api/evacuations", {
-        credentials: "include"
-      })
-      const result = await res.json()
-      if (res.ok) {
-        const pending = result.data.filter(
-          (item: any) => item.status === "pending"
-        )
-        setApplications(pending)
-      }
+    setLoading(true);
 
-    } catch (error) {
-      console.error("Fetch error:", error)
+    try {
+      const status = user?.role === 'admin' ? 'pending' : '';
+
+      const res = await fetch(
+        status ? `/api/evacuations?status=${status}` : '/api/evacuations',
+        { credentials: 'include' }
+      );
+
+      const result = await res.json();
+
+      if (res.ok) {
+        setApplications((result.data || []) as AppItem[]);
+      }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
-
 
   async function openDetail(id: string) {
+    const res = await fetch(`/api/evacuations/${id}`, {
+      credentials: 'include',
+    });
 
-    try {
-      const res = await fetch(`/api/evacuations/${id}`, {
-        credentials: "include"
-      })
-      const result = await res.json()
-      if (res.ok) {
-        setSelectedApp(result.data)
-        setDetailStep(1)
-        setShowDetail(true)
-      }
-    } catch (error) {
-      console.error("Detail error:", error)
+    const result = await res.json();
+
+    if (res.ok) {
+      setSelectedApp(result.data);
+      setShowDetail(true);
     }
-
   }
+async function handleApprove(
+    id: string,
+    redirectToPublication = false,
+  ) {
+    const res = await fetch(`/api/evacuations/${id}/approve`, {
+      method: 'POST',
+      credentials: 'include',
+    });
 
+    if (res.ok) {
+      alert('Permohonan disetujui');
 
-  async function handleApprove(id: string) {
-    try {
-      const res = await fetch(`/api/evacuations/${id}/approve`, {
-        method: "POST"
-      })
-      if (res.ok) {
-        alert("Permohonan disetujui")
-        setApplications(prev =>
-          prev.filter(app => app.id !== id)
-        )
-        setShowDetail(false)
+      setApplications((prev) => prev.filter((app) => app.id !== id));
+
+      setShowDetail(false);
+      if (redirectToPublication) {
+        router.push('/dashboard/penerbitan');
       }
-    } catch (error) {
-      console.error(error)
     }
   }
 
+  async function submitRevisi() {
+    if (!revisiId || !revisiNote.trim()) return;
 
-  async function handleReject(id: string) {
+    setSubmittingRevisi(true);
+
     try {
-      const res = await fetch(`/api/evacuations/${id}/reject`, {
-        method: "POST"
-      })
+      const res = await fetch(`/api/evacuations/${revisiId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          catatanRevisi: revisiNote.trim(),
+        }),
+      });
+
       if (res.ok) {
-        alert("Permohonan dikembalikan untuk revisi")
-        setApplications(prev =>
-          prev.filter(app => app.id !== id)
-        )
-        setShowDetail(false)
-        router.push("/revisi")
+        alert('Permohonan dikembalikan untuk revisi');
+
+        setApplications((prev) =>
+          prev.filter((app) => app.id !== revisiId)
+        );
+
+        setShowRevisiModal(false);
+        setShowDetail(false);
+        setRevisiNote('');
       }
-    } catch (error) {
-      console.error(error)
+    } finally {
+      setSubmittingRevisi(false);
     }
   }
 
-  function formatDate(date: string) {
-  if (!date) return "-"
-  return new Date(date).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric"
-  })
-}
+  function getStatusBadge(status: AppItem['status']) {
+    if (status === 'pending')
+      return <Badge variant="secondary">Menunggu Verifikasi</Badge>;
 
+    if (status === 'reviewed')
+      return <Badge variant="destructive">Perlu Revisi</Badge>;
 
-  function nextDetail() {
-    setDetailStep((prev) => Math.min(prev + 1, 4))
+    if (status === 'valid')
+      return <Badge className="bg-green-600">Disetujui</Badge>;
+
+    return <Badge variant="outline">Dibatalkan</Badge>;
   }
 
-  function prevDetail() {
-    setDetailStep((prev) => Math.max(prev - 1, 1))
-  }
+  const getNote = (app: AppItem) =>
+    app.catatanRevisi || app.catatan_revisi || app.revisionNotes || '-';
 
+  if (authLoading) return null;
 
   return (
     <div className="p-8">
+      {/* HEADER */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">
           Verifikasi Permohonan
         </h1>
-        <p className="text-gray-600">
-          Daftar permohonan yang menunggu verifikasi
-        </p>
 
+        <p className="text-gray-600">
+          {user?.role === 'admin'
+            ? 'Daftar permohonan yang menunggu verifikasi admin'
+            : 'Status verifikasi permohonan Anda'}
+        </p>
       </div>
 
-
+      {/* LIST DATA */}
       <Card>
         <CardHeader>
           <CardTitle>
-            Permohonan Pending
+            {user?.role === 'admin'
+              ? 'Permohonan Pending'
+              : 'Riwayat Verifikasi'}
           </CardTitle>
 
           <CardDescription>
-            {applications.length} permohonan menunggu verifikasi
+            {applications.length} data ditemukan
           </CardDescription>
         </CardHeader>
-        <CardContent>
 
+        <CardContent>
           {loading ? (
-            <div className="text-center py-10">
-              Loading...
-            </div>
+            <div className="text-center py-10">Loading...</div>
           ) : applications.length === 0 ? (
             <div className="text-center py-10 text-gray-500">
               Tidak ada permohonan
             </div>
           ) : (
-
             <div className="space-y-4">
               {applications.map((app) => (
                 <div
@@ -178,7 +205,7 @@ export default function VerifikasiPage() {
                 >
                   <div>
                     <div className="font-semibold">
-                      {app.namaPasien || "-"}
+                      {app.namaPasien || '-'}
                     </div>
 
                     <div className="text-sm text-gray-500">
@@ -186,24 +213,12 @@ export default function VerifikasiPage() {
                     </div>
 
                     <div className="text-sm text-gray-500">
-                      {app.noPenerbangan || "-"}
-                    </div>
-
-                    <div className="text-sm text-gray-500">
-
-                      {app.tanggalPerjalanan
-                        ? new Date(app.tanggalPerjalanan)
-                          .toLocaleDateString("id-ID")
-                        : "-"
-                      }
+                      {app.noPenerbangan || '-'}
                     </div>
                   </div>
 
-
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      Pending
-                    </Badge>
+                    {getStatusBadge(app.status)}
 
                     <Button
                       size="sm"
@@ -213,20 +228,54 @@ export default function VerifikasiPage() {
                       Detail
                     </Button>
 
-                    <Button
-                      size="sm"
-                      onClick={() => handleApprove(app.id)}
-                    >
-                      Setujui
-                    </Button>
+                    {user?.role === 'admin' && (
+                      <>
+                        <Button
+                          size="sm"
+                           onClick={() =>
+                            handleApprove(app.id, true)
+                          }
+                        >
+                          Setujui
+                        </Button>
 
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleReject(app.id)}
-                    >
-                      Revisi
-                    </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            setRevisiId(app.id);
+                            setShowRevisiModal(true);
+                          }}
+                        >
+                          Revisi
+                        </Button>
+                      </>
+                    )}
+
+                    {user?.role !== 'admin' &&
+                      app.status === 'reviewed' && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() =>
+                            router.push('/dashboard/revisi')
+                          }
+                        >
+                          Perbaiki Revisi
+                        </Button>
+                      )}
+
+                    {user?.role !== 'admin' &&
+                      app.status === 'valid' && (
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            router.push('/dashboard/penerbitan')
+                          }
+                        >
+                          Lihat Penerbitan
+                        </Button>
+                      )}
                   </div>
                 </div>
               ))}
@@ -235,255 +284,116 @@ export default function VerifikasiPage() {
         </CardContent>
       </Card>
 
-
-
       {/* MODAL DETAIL */}
-
       <Dialog open={showDetail} onOpenChange={setShowDetail}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              Detail Permohonan
-            </DialogTitle>
+            <DialogTitle>Detail Permohonan</DialogTitle>
             <DialogDescription>
-              Informasi lengkap permohonan evakuasi
+              Informasi ringkas permohonan
             </DialogDescription>
           </DialogHeader>
 
-
-          {/* STEP INDICATOR */}
-          <div className="flex justify-between mb-6 text-sm border-b pb-3">
-            {[
-              "Data Pribadi",
-              "Data Pasien",
-              "Kondisi Pasien",
-              "Data Penumpang"
-            ].map((label, index) => {
-              const step = index + 1
-              return (
-                <div
-                  key={step}
-                  className={`flex-1 text-center ${
-                    detailStep === step
-                      ? "font-semibold text-black"
-                      : "text-gray-400"
-                  }`}
-                >
-                  {step}. {label}
-                </div>
-              )
-            })}
-
-          </div>
-
-
           {selectedApp && (
             <div className="space-y-4 text-sm">
-              {/* STEP 1 */}
-              {detailStep === 1 && (
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs text-gray-500">Jenis Layanan</p>
-                    <p className="font-medium">{selectedApp.jenisLayanan || "-"}</p>
-                  </div>
+              <div>
+                <p className="text-xs text-gray-500">
+                  Nama Pasien
+                </p>
+                <p className="font-medium">
+                  {selectedApp.namaPasien || '-'}
+                </p>
+              </div>
 
-                  <div>
-                    <p className="text-xs text-gray-500">Jenis Pesawat</p>
-                    <p className="font-medium">{selectedApp.jenisPesawat || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Nama Petugas</p>
-                    <p className="font-medium">{selectedApp.namaPetugas || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">No Telepon Kantor</p>
-                    <p className="font-medium">{selectedApp.noTelepon || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Email Perusahaan</p>
-                    <p className="font-medium">{selectedApp.emailPerusahaan || "-"}</p>
-                  </div>
-                  
-
-                  <div>
-                    <p className="text-xs text-gray-500">Nama Maskapai</p>
-                    <p className="font-medium">{selectedApp.namaMaskapai || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">No Penerbangan</p>
-                    <p className="font-medium">{selectedApp.noPenerbangan || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">No Kursi</p>
-                    <p className="font-medium">{selectedApp.noKursi || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Tanggal Perjalanan</p>
-                    <p className="font-medium">{formatDate(selectedApp.tanggalPerjalanan) || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Jam Perjalanan</p>
-                    <p className="font-medium">{selectedApp.jamPerjalanan  || "-"}</p>
-                  </div>
+              <div>
+                <p className="text-xs text-gray-500">Status</p>
+                <div>
+                  {getStatusBadge(selectedApp.status)}
                 </div>
-              )}
+              </div>
 
-
-
-              {/* STEP 2 */}
-              {detailStep === 2 && (
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs text-gray-500">Nama Pasien</p>
-                    <p className="font-medium">{selectedApp.namaPasien || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Jenis Kelamin</p>
-                    <p className="font-medium">{selectedApp.jenisKelamin || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Tanggal Lahir</p>
-                    <p className="font-medium">{formatDate(selectedApp.tanggalLahir) || "-"}</p>
-                  </div>
-                </div>
-              )}
-
-
-
-              {/* STEP 3 */}
-
-              {detailStep === 3 && (
-                <div className="grid grid-cols-2 gap-6">
-
-                  <div>
-                    <p className="text-xs text-gray-500">Memerlukan Oksigen</p>
-                    <p className="font-medium">{selectedApp.memerlukanOksigen || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Posisi Pasien</p>
-                    <p className="font-medium">{selectedApp.posisiPasien || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Tingkat Kesadaran</p>
-                    <p className="font-medium">{selectedApp.tingkatKesadaran || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Tekanan Darah</p>
-                    <p className="font-medium">{selectedApp.tekananDarah || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Nadi</p>
-                    <p className="font-medium">{selectedApp.nadi || "-"}</p>
-                  </div>
-
-                   <div>
-                    <p className="text-xs text-gray-500">Frekuensi Nafas</p>
-                    <p className="font-medium">{selectedApp.frekuensiNafas || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Saturasi Oksigen</p>
-                    <p className="font-medium">{selectedApp.saturasiOksigen || "-"}</p>
-                  </div>
-                </div>
-
-              )}
-
-              {/* STEP 4 */}
-
-              {detailStep === 4 && (
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs text-gray-500">Jumlah Pendamping</p>
-                    <p className="font-medium">{selectedApp.jumlahPendamping || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Hubungan dengan Pasien</p>
-                    <p className="font-medium">{selectedApp.hubunganPasien || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">Nama Pendamping</p>
-                    <p className="font-medium">{selectedApp.namaPendamping || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">No Telepon Pendamping Medis</p>
-                    <p className="font-medium">{selectedApp.nomorTeleponPendampingMedis || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">No Telepon Pendamping Medis</p>
-                    <p className="font-medium">{selectedApp.nomorTeleponPendampingMedis || "-"}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500">No Telepon Pendamping Keluarga</p>
-                    <p className="font-medium">{selectedApp.nomorTeleponKeluarga || "-"}</p>
-                  </div>
-
-                   <div>
-                    <p className="text-xs text-gray-500">No Surat Izin</p>
-                    <p className="font-medium">{selectedApp.nomorTeleponKeluarga || "-"}</p>
-                  </div>
+              {selectedApp.status === 'reviewed' && (
+                <div>
+                  <p className="text-xs text-gray-500">
+                    Catatan Revisi
+                  </p>
+                  <p className="font-medium">
+                    {getNote(selectedApp)}
+                  </p>
                 </div>
               )}
             </div>
           )}
 
+          {user?.role === 'admin' && selectedApp && (
+            <DialogFooter>
+              <Button
+                onClick={() =>
+                  handleApprove(selectedApp.id, true)
+                }
+              >
+                Setujui
+              </Button>
+
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setRevisiId(selectedApp.id);
+                  setShowRevisiModal(true);
+                }}
+              >
+                Revisi
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL CATATAN REVISI */}
+      <Dialog
+        open={showRevisiModal}
+        onOpenChange={setShowRevisiModal}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Catatan Revisi</DialogTitle>
+
+            <DialogDescription>
+              Masukkan catatan revisi untuk pemohon
+            </DialogDescription>
+          </DialogHeader>
+
+          <textarea
+            className="w-full border rounded-md p-2 text-sm"
+            rows={4}
+            placeholder="Contoh: Mohon lengkapi nomor surat izin..."
+            value={revisiNote}
+            onChange={(e) => setRevisiNote(e.target.value)}
+          />
 
           <DialogFooter>
-            {detailStep > 1 && (
-              <Button
-                variant="outline"
-                onClick={prevDetail}
-              >
-                Previous
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              onClick={() => setShowRevisiModal(false)}
+              disabled={submittingRevisi}
+            >
+              Batal
+            </Button>
 
-            {detailStep < 4 ? (
-              <Button onClick={nextDetail}>
-                Next
-              </Button>
-
-            ) : (
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleApprove(selectedApp.id)}
-                >
-                  Setujui
-                </Button>
-
-                <Button
-                  variant="destructive"
-                  onClick={() => handleReject(selectedApp.id)}
-                >
-                  Revisi
-                </Button>
-
-              </div>
-            )}
-
+            <Button
+              variant="destructive"
+              onClick={submitRevisi}
+              disabled={
+                submittingRevisi || !revisiNote.trim()
+              }
+            >
+              {submittingRevisi
+                ? 'Menyimpan...'
+                : 'Submit Revisi'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  )
-
+  );
 }

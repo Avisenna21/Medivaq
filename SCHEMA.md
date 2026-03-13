@@ -79,6 +79,7 @@ Main table for air medical evacuation records with complete patient and flight i
 | Column | Type | Description |
 |--------|------|-------------|
 | status | ENUM('pending','valid','canceled','reviewed') | Request status |
+| catatanRevisi | TEXT | Revision note from verifier |
 | noSuratPraktik | VARCHAR(255) | License/practice document number |
 | fotoKondisiPasien | VARCHAR(500) | Patient condition photo path |
 | ktpPasien | VARCHAR(500) | Patient ID copy path |
